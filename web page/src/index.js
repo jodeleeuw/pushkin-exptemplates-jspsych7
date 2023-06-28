@@ -1,8 +1,7 @@
-import React from 'react';
+import { useState, useEffect } from 'react';
+import { useSelector } from 'react-redux';
 import pushkinClient from 'pushkin-client';
 import { initJsPsych } from 'jspsych';
-import { withRouter } from 'react-router-dom';
-import { connect } from 'react-redux';
 import { createTimeline } from './experiment';
 import jsYaml from 'js-yaml';
 const fs = require('fs');
@@ -14,25 +13,15 @@ const expConfig = jsYaml.load(fs.readFileSync('../config.yaml'), 'utf8');
 
 const pushkin = new pushkinClient();
 
-const mapStateToProps = state => {
-  return {
-    userID: state.userInfo.userID
-  };
-}
+export default function QuizComponent({ api }) {
+  const [loading, setLoading] = useState(true);
 
-class quizComponent extends React.Component {
+  const userID = useSelector(state => state.userInfo.userID);
 
-  constructor(props) {
-    super(props);
-    this.state = { loading: true };
-  }
+  const startExperiment = async () => {
 
-  componentDidMount() {
-    this.startExperiment();
-  }
-
-  async startExperiment() {
-    this.setState({ experimentStarted: true });
+    await pushkin.connect(api);
+    await pushkin.prepExperimentRun(userID);
 
     const jsPsych = initJsPsych({
       display_element: document.getElementById('jsPsychTarget'),
@@ -40,32 +29,30 @@ class quizComponent extends React.Component {
     });
 
     jsPsych.data.addProperties({user_id: this.props.userID}); //See https://www.jspsych.org/core_library/jspsych-data/#jspsychdataaddproperties
-    await pushkin.connect(this.props.api);
-    //await pushkin.prepExperimentRun(this.props.userID);
     
     const timeline = createTimeline(jsPsych);
 
     jsPsych.run(timeline);
 
     document.getElementById('jsPsychTarget').focus();
-    this.setState({ loading: false });
+
+    setLoading(false);
   }
 
-  async endExperiment() {
+  const endExperiment = async () => {
     document.getElementById("jsPsychTarget").innerHTML = "Processing...";
     await pushkin.tabulateAndPostResults(this.props.userID, expConfig.experimentName)
     document.getElementById("jsPsychTarget").innerHTML = "Thank you for participating!";
   }
 
-  render() {
+  useEffect(() => {
+    startExperiment();
+  }, []);
 
-    return (
-      <div>
-        {this.state.loading && <h1>Loading...</h1>}
-        <div id="jsPsychTarget" />
-      </div>
-    );
-  }
+  return (
+    <div>
+      {loading && <h1>Loading...</h1>}
+      <div id="jsPsychTarget" />
+    </div>
+  );
 }
-
-export default connect(mapStateToProps)(quizComponent);
