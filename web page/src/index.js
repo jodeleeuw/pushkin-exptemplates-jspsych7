@@ -15,6 +15,8 @@ const pushkin = new pushkinClient();
 
 export default function QuizComponent({ api }) {
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [finished, setFinished] = useState(false);
 
   const userID = useSelector(state => state.userInfo.userID);
 
@@ -25,7 +27,7 @@ export default function QuizComponent({ api }) {
 
     const jsPsych = initJsPsych({
       display_element: document.getElementById('jsPsychTarget'),
-      on_finish: this.endExperiment.bind(this),
+      on_finish: endExperiment,
     });
 
     jsPsych.data.addProperties({user_id: this.props.userID}); //See https://www.jspsych.org/core_library/jspsych-data/#jspsychdataaddproperties
@@ -40,9 +42,9 @@ export default function QuizComponent({ api }) {
   }
 
   const endExperiment = async () => {
-    document.getElementById("jsPsychTarget").innerHTML = "Processing...";
-    await pushkin.tabulateAndPostResults(this.props.userID, expConfig.experimentName)
-    document.getElementById("jsPsychTarget").innerHTML = "Thank you for participating!";
+    setSaving(true);
+    await pushkin.tabulateAndPostResults(this.props.userID, expConfig.experimentName);
+    setFinished(true);
   }
 
   useEffect(() => {
@@ -52,6 +54,8 @@ export default function QuizComponent({ api }) {
   return (
     <div>
       {loading && <h1>Loading...</h1>}
+      {(saving && !finished) && <h1>Processing...</h1>}
+      {finished && <h1>Finished...</h1>}
       <div id="jsPsychTarget" />
     </div>
   );
