@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useSelector } from 'react-redux';
 import pushkinClient from 'pushkin-client';
 import { initJsPsych } from 'jspsych';
@@ -18,6 +18,8 @@ export default function QuizComponent({ api }) {
   const [saving, setSaving] = useState(false);
   const [finished, setFinished] = useState(false);
 
+  const jsPsychTarget = useRef(null);
+
   const userID = useSelector(state => state.userInfo.userID);
 
   const startExperiment = async () => {
@@ -26,7 +28,7 @@ export default function QuizComponent({ api }) {
     await pushkin.prepExperimentRun(userID);
 
     const jsPsych = initJsPsych({
-      display_element: document.getElementById('jsPsychTarget'),
+      display_element: jsPsychTarget.current,
       on_finish: endExperiment,
     });
 
@@ -36,7 +38,8 @@ export default function QuizComponent({ api }) {
 
     jsPsych.run(timeline);
 
-    document.getElementById('jsPsychTarget').focus();
+    jsPsychTarget.current.focus();
+
 
     setLoading(false);
   }
@@ -56,7 +59,7 @@ export default function QuizComponent({ api }) {
       {loading && <h1>Loading...</h1>}
       {(saving && !finished) && <h1>Processing...</h1>}
       {finished && <h1>Finished...</h1>}
-      <div id="jsPsychTarget" />
+      <div id="jsPsychTarget" ref={jsPsychTarget} />
     </div>
   );
 }
